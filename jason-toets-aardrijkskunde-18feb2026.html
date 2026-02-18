@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jason Toets Aardrijkskunde 18 feb 2026</title>
+  <style>
+    :root {
+      --bg-a: #f6f1e8;
+      --bg-b: #dfe9f8;
+      --card: #fff;
+      --ink: #1a2233;
+      --muted: #4f5d73;
+      --line: #cdd8e7;
+      --accent: #0f766e;
+      --accent-2: #2563eb;
+      --ok: #15803d;
+      --bad: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, #fff2cb 0%, transparent 40%),
+        radial-gradient(circle at 88% 10%, #d8f0ff 0%, transparent 34%),
+        linear-gradient(145deg, var(--bg-a), var(--bg-b));
+    }
+    .app {
+      width: min(900px, 100%);
+      background: var(--card);
+      border: 1px solid #d6dfeb;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 18px 36px rgba(24, 39, 72, 0.14);
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(1.35rem, 3vw, 2rem); }
+    .subtitle { margin: 0 0 14px; color: var(--muted); font-weight: 600; }
+    .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 0.92rem;
+      background: #f7faff;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+    }
+    .label { margin: 0 0 6px; color: var(--muted); font-weight: 700; }
+    .term {
+      margin: 0 0 12px;
+      font-size: clamp(1.25rem, 3.4vw, 1.95rem);
+      font-weight: 800;
+      color: #113a61;
+    }
+    .options { display: grid; gap: 8px; }
+    .option {
+      width: 100%;
+      text-align: left;
+      border: 2px solid #cfdaea;
+      border-radius: 10px;
+      background: #fff;
+      color: #1b2538;
+      padding: 10px;
+      font-size: 0.98rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .option:hover:not(:disabled) { border-color: #88b6df; }
+    .option:disabled { cursor: default; }
+    .option.correct { border-color: var(--ok); background: #e8f8ec; }
+    .option.wrong { border-color: var(--bad); background: #fdecec; }
+    .feedback {
+      margin-top: 12px;
+      border: 1px solid #d8e2f0;
+      border-radius: 10px;
+      padding: 10px;
+      background: #f8fbff;
+    }
+    .status { margin: 0 0 6px; font-weight: 800; }
+    .status.goed { color: var(--ok); }
+    .status.fout { color: var(--bad); }
+    .exact { margin: 6px 0 0; color: #243451; }
+    .actions { margin-top: 10px; }
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      font-family: inherit;
+      color: #fff;
+      background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    }
+    .hidden { display: none; }
+    .done {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      background: #f6fbff;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Begrippentoets Aardrijkskunde (3.1 t/m 3.4)</h1>
+    <p class="subtitle">Meerkeuze. Klik het juiste antwoord. Begrippen staan in random volgorde.</p>
+
+    <div class="stats">
+      <span class="chip" id="progress">Vraag 1 / 30</span>
+      <span class="chip" id="score">Goed: 0</span>
+      <span class="chip" id="wrong">Fout: 0</span>
+    </div>
+
+    <section id="quizCard" class="card">
+      <p class="label">Begrip</p>
+      <p id="term" class="term">...</p>
+      <div id="options" class="options"></div>
+
+      <div id="feedback" class="feedback hidden">
+        <p id="status" class="status"></p>
+        <p id="explanation"></p>
+        <p id="exact" class="exact"></p>
+        <div class="actions">
+          <button id="nextBtn" class="btn" type="button">Volgende vraag</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="done" class="done hidden">
+      <h2>Toets afgerond</h2>
+      <p id="summary"></p>
+      <button id="restartBtn" class="btn" type="button">Opnieuw (nieuwe random volgorde)</button>
+    </section>
+  </main>
+
+  <script>
+    const VRAGEN = [
+      { begrip: "gematigd zeeklimaat", antwoord: "klimaat waarin het verschil tussen de zomer- en wintertemperatuur niet zo groot is en het hele jaar door neerslag kan vallen", sectie: "3.1" },
+      { begrip: "hoge breedte", antwoord: "de afstand ten opzichte van de evenaar uitgedrukt in graden, waarbij de afstand boven de 60e graad ligt", sectie: "3.1" },
+      { begrip: "hooggebergteklimaat", antwoord: "temperatuur komt nooit boven 10 graden; dit klimaat ligt hoog in de bergen", sectie: "3.1" },
+      { begrip: "klimaat", antwoord: "het gemiddelde weer, gemeten over een periode van dertig jaar", sectie: "3.1" },
+      { begrip: "lage breedte", antwoord: "de afstand ten opzichte van de evenaar uitgedrukt in graden, waarbij de afstand onder de 30e graad ligt", sectie: "3.1" },
+      { begrip: "landklimaat", antwoord: "klimaat met een groot verschil tussen zomer- en wintertemperatuur", sectie: "3.1" },
+      { begrip: "poolklimaat", antwoord: "temperatuur komt nooit boven de 0 graden", sectie: "3.1" },
+      { begrip: "savanneklimaat", antwoord: "klimaat waarbij de temperatuur altijd hoger is dan 18 °C en er een droge en een natte tijd is", sectie: "3.1" },
+      { begrip: "steppeklimaat", antwoord: "klimaat met hoge temperaturen en weinig neerslag, waardoor de begroeiing beperkt blijft tot gras", sectie: "3.1" },
+      { begrip: "toendraklimaat", antwoord: "klimaat waarbij zelfs in de zomer de temperatuur niet boven de 10 °C komt", sectie: "3.1" },
+      { begrip: "tropisch regenwoudklimaat", antwoord: "klimaat waarbij de temperatuur altijd hoger is dan 18 °C en het hele jaar door veel regen valt", sectie: "3.1" },
+      { begrip: "weer", antwoord: "toestand van de atmosfeer op een bepaald moment en een bepaalde plaats", sectie: "3.1" },
+      { begrip: "woestijnklimaat", antwoord: "klimaat met meestal hoge temperaturen en vrijwel geen neerslag", sectie: "3.1" },
+      { begrip: "atmosfeer (dampkring)", antwoord: "luchtlaag rondom de aarde", sectie: "3.2" },
+      { begrip: "invalshoek van de zon", antwoord: "de hoek waaronder de zonnestralen het aardoppervlak raken", sectie: "3.2" },
+      { begrip: "kortgolvige straling", antwoord: "zichtbare straling (licht) door de zon uitgezonden", sectie: "3.2" },
+      { begrip: "langgolvige straling", antwoord: "warmtestraling uitgestraald door de aarde", sectie: "3.2" },
+      { begrip: "aardas", antwoord: "denkbeeldige lijn die dwars door de aarde van de Noord- naar Zuidpool loopt. De aarde draait in 24 uur om haar as", sectie: "3.3" },
+      { begrip: "pooldag", antwoord: "periode in het jaar waarin de zon voor een langere periode niet onder de horizon komt", sectie: "3.3" },
+      { begrip: "poolnacht", antwoord: "periode in het jaar waarin de zon voor een langere periode niet boven de horizon komt", sectie: "3.3" },
+      { begrip: "frontale regen", antwoord: "warme lucht van lage breedten en koude lucht vanuit de poolgebieden botsen. De warme lucht wordt gedwongen op te stijgen waarna regen ontstaat.", sectie: "3.4" },
+      { begrip: "gletsjers", antwoord: "grote ijspakketten in de bergen, die ontstaan door ophoping van sneeuw", sectie: "3.4" },
+      { begrip: "korte waterkringloop", antwoord: "het proces waarbij zeewater na verdamping uit zee via wolken in zee terugvalt", sectie: "3.4" },
+      { begrip: "lange waterkringloop", antwoord: "het proces waarbij zeewater na verdamping uit zee via wolken, neerslag, grondwater en rivieren weer terugstroomt naar zee", sectie: "3.4" },
+      { begrip: "lijzijde", antwoord: "zijde van de berg waar bijna geen regen valt", sectie: "3.4" },
+      { begrip: "loefzijde", antwoord: "zijde van de berg waar veel regen valt", sectie: "3.4" },
+      { begrip: "regenschaduw", antwoord: "kant van gebergte waar het weinig regent", sectie: "3.4" },
+      { begrip: "stijgingsregen", antwoord: "regen die ontstaat als het heel warm is en er veel water verdampt en opstijgt", sectie: "3.4" },
+      { begrip: "stuwingsregen", antwoord: "regen die ontstaat wanneer lucht tegen de bergen aanwaait en opstijgt", sectie: "3.4" },
+      { begrip: "waterdamp", antwoord: "onzichtbaar gas dat ontstaat als water verdampt", sectie: "3.4" }
+    ];
+
+    const els = {
+      progress: document.getElementById("progress"),
+      score: document.getElementById("score"),
+      wrong: document.getElementById("wrong"),
+      term: document.getElementById("term"),
+      options: document.getElementById("options"),
+      feedback: document.getElementById("feedback"),
+      status: document.getElementById("status"),
+      explanation: document.getElementById("explanation"),
+      exact: document.getElementById("exact"),
+      nextBtn: document.getElementById("nextBtn"),
+      quizCard: document.getElementById("quizCard"),
+      done: document.getElementById("done"),
+      summary: document.getElementById("summary"),
+      restartBtn: document.getElementById("restartBtn")
+    };
+
+    const state = {
+      vragen: [],
+      index: 0,
+      goed: 0,
+      fout: 0
+    };
+
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function updateStats() {
+      const totaal = state.vragen.length;
+      const nr = Math.min(state.index + 1, totaal);
+      els.progress.textContent = `Vraag ${nr} / ${totaal}`;
+      els.score.textContent = `Goed: ${state.goed}`;
+      els.wrong.textContent = `Fout: ${state.fout}`;
+    }
+
+    function makeOptions(vraag) {
+      const foutOpties = shuffle(
+        VRAGEN
+          .filter((v) => v.begrip !== vraag.begrip)
+          .map((v) => v.antwoord)
+      ).slice(0, 3);
+      return shuffle([vraag.antwoord, ...foutOpties]);
+    }
+
+    function renderVraag() {
+      const vraag = state.vragen[state.index];
+      els.term.textContent = `${vraag.begrip} (par. ${vraag.sectie})`;
+      els.options.innerHTML = "";
+      els.feedback.classList.add("hidden");
+
+      const opties = makeOptions(vraag);
+      opties.forEach((optie) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "option";
+        btn.textContent = optie;
+        btn.addEventListener("click", () => checkAntwoord(btn, optie, vraag));
+        els.options.appendChild(btn);
+      });
+
+      updateStats();
+    }
+
+    function checkAntwoord(clickedBtn, gekozen, vraag) {
+      const buttons = Array.from(document.querySelectorAll(".option"));
+      buttons.forEach((b) => { b.disabled = true; });
+
+      buttons.forEach((b) => {
+        if (b.textContent === vraag.antwoord) b.classList.add("correct");
+      });
+
+      const goed = gekozen === vraag.antwoord;
+      if (goed) {
+        state.goed += 1;
+        els.status.className = "status goed";
+        els.status.textContent = "Beoordeling: GOED";
+        els.explanation.textContent = "Dit is het juiste antwoord.";
+      } else {
+        state.fout += 1;
+        clickedBtn.classList.add("wrong");
+        els.status.className = "status fout";
+        els.status.textContent = "Beoordeling: FOUT";
+        els.explanation.textContent = "Je keuze was niet juist.";
+      }
+
+      els.exact.textContent = `Exact antwoord begrippenlijst: ${vraag.antwoord}`;
+      els.feedback.classList.remove("hidden");
+      updateStats();
+    }
+
+    function volgende() {
+      state.index += 1;
+      if (state.index >= state.vragen.length) {
+        afronden();
+        return;
+      }
+      renderVraag();
+    }
+
+    function afronden() {
+      els.quizCard.classList.add("hidden");
+      els.done.classList.remove("hidden");
+      const totaal = state.vragen.length;
+      const pct = (state.goed / totaal) * 100;
+      els.summary.textContent = `Eindscore: ${state.goed}/${totaal} goed (${pct.toFixed(1)}%).`;
+      updateStats();
+    }
+
+    function start() {
+      state.vragen = shuffle(VRAGEN);
+      state.index = 0;
+      state.goed = 0;
+      state.fout = 0;
+      els.done.classList.add("hidden");
+      els.quizCard.classList.remove("hidden");
+      renderVraag();
+    }
+
+    els.nextBtn.addEventListener("click", volgende);
+    els.restartBtn.addEventListener("click", start);
+
+    start();
+  </script>
+</body>
+</html>
